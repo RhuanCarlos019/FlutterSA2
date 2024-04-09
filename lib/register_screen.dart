@@ -1,5 +1,5 @@
-import 'package:app_autentication_seetings/Database.dart';
 import 'package:flutter/material.dart';
+import 'package:app_autentication_seetings/database.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -51,24 +51,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String username = _usernameController.text;
     String password = _passwordController.text;
 
+    if (username.isEmpty || password.isEmpty) {
+      // Exibe um snackbar informando que os campos estão em branco
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Campos em branco'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return; // Retorna para evitar continuar com o processo de registro
+    }
+
     await DatabaseHelper().register(username, password);
 
-    showDialog(
-      // ignore: use_build_context_synchronously
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Successo'),
-        content: const Text('Registrado com sucesso'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('OK'),
-          ),
-        ],
+    // Exibe um snackbar para informar que o registro foi realizado com sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Registro realizado'),
+        duration: Duration(seconds: 2), // Define a duração do snackbar
       ),
     );
+
+    // Fecha a tela de registro após o registro ter sido realizado com sucesso
+    Future.delayed(Duration(seconds: 2), () {
+      Navigator.pop(context);
+    });
   }
 }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:app_autentication_seetings/database.dart';
 import 'package:app_autentication_seetings/register_screen.dart';
+import 'package:app_autentication_seetings/user_settings_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _LoginScreenState createState() => _LoginScreenState();
 }
 
@@ -14,11 +14,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  bool _isLoggedIn = false; // Estado para controlar se o usuário está logado
+  String _loggedInUserName = ''; // Nome do usuário logado
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: _isLoggedIn
+            ? Text('Olá, $_loggedInUserName') // Altera o título da barra de aplicativos após o login bem-sucedido
+            : const Text('Login'), // Título padrão antes do login
+        actions: [
+          if (_isLoggedIn) // Exibir o botão de configurações apenas se o usuário estiver logado
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UserSettingsScreen()),
+                );
+              },
+            ),
+          if (_isLoggedIn) // Exibir o botão de sair apenas se o usuário estiver logado
+            IconButton(
+              icon: Icon(Icons.logout),
+              onPressed: () {
+                _logoutConfirmation(context);
+              },
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -65,20 +89,43 @@ class _LoginScreenState extends State<LoginScreen> {
     String username = _usernameController.text;
     String password = _passwordController.text;
 
-    // Verificar no banco de dados
-    bool loginSuccess = await DatabaseHelper().login(username, password);
-    if (loginSuccess) {
+    if (username.isEmpty || password.isEmpty) {
+      // Exibe um diálogo informando que os campos estão em branco
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Successo'),
-          content: const Text('Login bem sucedido '),
+          title: Text('Erro'),
+          content: Text('Campos em branco'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text('OK'),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return; // Retorna para evitar continuar com o processo de login
+    }
+
+    bool loginSuccess = await DatabaseHelper().login(username, password);
+    if (loginSuccess) {
+      setState(() {
+        _isLoggedIn = true; // Atualiza o estado para indicar que o usuário está logado
+        _loggedInUserName = username; // Atualiza o nome do usuário logado
+      });
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Successo'),
+          content: Text('Login bem sucedido'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('OK'),
             ),
           ],
         ),
@@ -87,18 +134,50 @@ class _LoginScreenState extends State<LoginScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Erro'),
-          content: const Text('Usuário não encontrado'),
+          title: Text('Erro'),
+          content: Text('Usuário não encontrado'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text('OK'),
+              child: Text('OK'),
             ),
           ],
         ),
       );
     }
+  }
+
+  void _logoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmação'),
+        content: Text('Você quer realmente sair?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Fecha o diálogo de confirmação
+            },
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              _logout();
+              Navigator.pop(context); // Fecha o diálogo de confirmação
+            },
+            child: Text('Sair'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logout() {
+    setState(() {
+      _isLoggedIn = false; // Atualiza o estado para indicar que o usuário não está mais logado
+      _loggedInUserName = ''; // Limpa o nome do usuário logado
+    });
   }
 }
