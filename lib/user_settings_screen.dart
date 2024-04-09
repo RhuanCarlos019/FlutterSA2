@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Importe o pacote SharedPreferences
 
 class UserSettingsScreen extends StatefulWidget {
   const UserSettingsScreen({Key? key}) : super(key: key);
@@ -8,10 +9,14 @@ class UserSettingsScreen extends StatefulWidget {
 }
 
 class _UserSettingsScreenState extends State<UserSettingsScreen> {
-  String selectedUsername = ''; // Variável para armazenar o nome de usuário selecionado
-  Color selectedColor = Colors.blue; // Variável para armazenar a cor selecionada
-
   TextEditingController _usernameController = TextEditingController();
+  Color selectedColor = Colors.blue;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings(); // Carregar as configurações do usuário ao inicializar a tela
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +29,11 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Campo de texto para o usuário escolher seu nome de usuário
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(labelText: 'Nome de Usuário'),
             ),
             const SizedBox(height: 20),
-            // Dropdown para o usuário escolher a cor do tema
             DropdownButton<Color>(
               value: selectedColor,
               onChanged: (Color? color) {
@@ -58,7 +61,6 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            // Botão de salvar
             ElevatedButton(
               onPressed: () {
                 _saveSettings();
@@ -71,25 +73,27 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     );
   }
 
-  void _saveSettings() {
+  void _saveSettings() async {
     String username = _usernameController.text;
-    // Aqui você pode salvar as configurações do usuário (como nome de usuário e cor do tema) como preferir
-    // Por exemplo, você pode usar algum serviço de gerenciamento de estado, banco de dados, etc.
-    // Após salvar, você pode exibir uma mensagem confirmando que as configurações foram salvas
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Configurações Salvas'),
-        content: Text('Nome de Usuário: $username\nCor do Tema: ${selectedColor.toString()}'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username); // Salvar o nome de usuário utilizando SharedPreferences
+    Navigator.pop(context, UserSettings(username: username, selectedColor: selectedColor));
   }
+
+  void _loadSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username');
+    if (username != null) {
+      setState(() {
+        _usernameController.text = username;
+      });
+    }
+  }
+}
+
+class UserSettings {
+  final String username;
+  final Color selectedColor;
+
+  UserSettings({required this.username, required this.selectedColor});
 }

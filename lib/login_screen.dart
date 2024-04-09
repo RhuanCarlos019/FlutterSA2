@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:app_autentication_seetings/database.dart';
 import 'package:app_autentication_seetings/register_screen.dart';
-import 'package:app_autentication_seetings/user_settings_screen.dart'; 
+import 'package:app_autentication_seetings/user_settings_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Importe o pacote SharedPreferences
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -14,28 +15,31 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool _isLoggedIn = false; // Estado para controlar se o usuário está logado
-  String _loggedInUserName = ''; // Nome do usuário logado
+  bool _isLoggedIn = false;
+  String _loggedInUserName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername(); // Carregar o nome de usuário ao inicializar a tela
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: _isLoggedIn
-            ? Text('Olá, $_loggedInUserName') // Altera o título da barra de aplicativos após o login bem-sucedido
-            : const Text('Login'), // Título padrão antes do login
+            ? Text('Olá, $_loggedInUserName')
+            : const Text('Login'),
         actions: [
-          if (_isLoggedIn) // Exibir o botão de configurações apenas se o usuário estiver logado
+          if (_isLoggedIn)
             IconButton(
               icon: Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UserSettingsScreen()),
-                );
+              onPressed: () async {
+                await _navigateToUserSettings();
               },
             ),
-          if (_isLoggedIn) // Exibir o botão de sair apenas se o usuário estiver logado
+          if (_isLoggedIn)
             IconButton(
               icon: Icon(Icons.logout),
               onPressed: () {
@@ -85,12 +89,25 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _navigateToUserSettings() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => UserSettingsScreen()),
+    );
+
+    if (result != null && result is UserSettings) {
+      setState(() {
+        _loggedInUserName = result.username;
+        // Atualize aqui a cor de fundo da tela com result.selectedColor
+      });
+    }
+  }
+
   void _login() async {
     String username = _usernameController.text;
     String password = _passwordController.text;
 
     if (username.isEmpty || password.isEmpty) {
-      // Exibe um diálogo informando que os campos estão em branco
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -106,15 +123,19 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
       );
-      return; // Retorna para evitar continuar com o processo de login
+      return;
     }
 
     bool loginSuccess = await DatabaseHelper().login(username, password);
     if (loginSuccess) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', username); // Salvar o nome de usuário utilizando SharedPreferences
       setState(() {
-        _isLoggedIn = true; // Atualiza o estado para indicar que o usuário está logado
-        _loggedInUserName = username; // Atualiza o nome do usuário logado
+        _isLoggedIn = true;
+        _loggedInUserName = username;
       });
+      _usernameController.clear();
+      _passwordController.clear();
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -158,14 +179,14 @@ class _LoginScreenState extends State<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Fecha o diálogo de confirmação
+              Navigator.pop(context);
             },
             child: Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
               _logout();
-              Navigator.pop(context); // Fecha o diálogo de confirmação
+              Navigator.pop(context);
             },
             child: Text('Sair'),
           ),
@@ -174,10 +195,25 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _logout() {
+  Future<void> _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('username'); // Remover o nome de usuário ao fazer logout
     setState(() {
-      _isLoggedIn = false; // Atualiza o estado para indicar que o usuário não está mais logado
-      _loggedInUserName = ''; // Limpa o nome do usuário logado
+      _isLoggedIn = false;
+      _loggedInUserName = '';
+      _usernameController.clear();
+      _passwordController.clear();
     });
+  }
+
+  void _loadUsername() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username');
+    if (username != null) {
+      setState(() {
+        _usernameController.text = username;
+        _loggedInUserName = username;
+      });
+    }
   }
 }

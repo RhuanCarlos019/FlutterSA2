@@ -72,6 +72,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
 
+    // Limpa os campos de texto após o registro ter sido realizado com sucesso
+    _usernameController.clear();
+    _passwordController.clear();
+
     // Fecha a tela de registro após o registro ter sido realizado com sucesso
     Future.delayed(Duration(seconds: 2), () {
       Navigator.pop(context);
